@@ -13,8 +13,13 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/', (req, res) => {
-  res.json({ message: 'Backend is running' });
+app.get('/api/test-db', async (req, res) => {
+  try {
+    await connectDB();
+    res.json({ message: 'DB connected' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.use("/api", routes);
