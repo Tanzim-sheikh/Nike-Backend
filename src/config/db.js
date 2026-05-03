@@ -1,12 +1,16 @@
 import mongoose from "mongoose";
 
 // Cache connection for serverless environments (Vercel)
-let isConnected = false;
+let cachedConnection = null;
 
 const connectDB = async () => {
-  if (isConnected) {
+  if (mongoose.connection.readyState === 1) {
     console.log("Using existing MongoDB connection");
-    return;
+    return mongoose.connection;
+  }
+
+  if (cachedConnection) {
+    return cachedConnection;
   }
 
   try {
@@ -17,11 +21,16 @@ const connectDB = async () => {
       family: 4,                         // Force IPv4 (avoid IPv6 issues)
     };
 
-    await mongoose.connect(process.env.MONGO_URI, options);
-    isConnected = mongoose.connection.readyState === 1;
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI is not configured");
+    }
+
+    cachedConnection = mongoose.connect(process.env.MONGO_URI, options);
+    await cachedConnection;
     console.log("MongoDB Connected");
-    console.log("MONGO URI:", process.env.MONGO_URI);
+    return mongoose.connection;
   } catch (err) {
+    cachedConnection = null;
     console.error("DB Error:", err);
     throw err; // Don't swallow the error
   }

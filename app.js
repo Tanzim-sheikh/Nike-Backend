@@ -7,12 +7,32 @@ import errorHandler from "./src/middleware/error.js";
 
 const app = express();
 
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    "https://nike-taas.netlify.app",
+    "http://localhost:5173",
+].filter(Boolean);
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || "https://nike-taas.netlify.app",
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error(`CORS blocked origin: ${origin}`));
+    },
     credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use("/api", async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 app.get('/api/test-db', async (req, res) => {
   try {
